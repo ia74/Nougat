@@ -1,0 +1,111 @@
+<div id="queueview">
+  <h2>Queue</h2>
+  <div id="queueprev" class="qv">
+
+  </div>
+  <div id="queuecurr"></div>
+  <div id="queuenext" class="qv"></div>
+</div>
+
+<style>
+  #queueview {
+    /* a sidebar */
+    position: fixed;
+    bottom: 0;
+    right: 0;
+    width: var(--queue-width);
+    margin-top: var(--navbar-height);
+    height: calc(100% - var(--navbar-height) - 15px);
+    background-color: #333;
+    color: white;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 10px;
+    overflow-y: scroll;
+  }
+
+  .qv {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    filter:brightness(0.8);
+  }
+
+  .qv-song {
+    background-color: #455;
+    padding: 10px;
+    border-radius: 5px;
+    cursor: pointer;
+  }
+
+  .can-be-preloaded:not(.preloaded) {
+    filter: brightness(0.8);
+  }
+
+  #queueprev {
+    font-size: .5em;
+  }
+
+  #queuenext {
+    font-size: .75em;
+  }
+
+  #queueview img {
+    width: 100%;
+  }
+</style>
+
+<script>
+  import apiBridge from './apiBridge.js'
+  if (!apiBridge.testConnectionToAppMain('queue')) console.error('[queue] Connection to APIBridge failed, the view will not work as expected')
+  apiBridge.cve.on('music_play_start', () => {
+    queueSetup();
+  }, 1500);
+
+  const queueSetup = () => {
+    document.getElementById('queueprev').innerHTML = '';
+    document.getElementById('queuecurr').innerHTML = '';
+    document.getElementById('queuenext').innerHTML = '';
+    apiBridge.queue.songsLeft.forEach(song => {
+      const songDiv = document.createElement('div');
+      songDiv.classList.add('qv-song');
+      songDiv.classList.add('can-be-preloaded');
+      songDiv.dataset.sin = JSON.stringify(song)
+      songDiv.innerHTML = `<h2>${song.title}</h2><p>${song.artist}</p>`;
+      document.getElementById('queueprev').appendChild(songDiv);
+    });
+    const songDiv = document.createElement('div');
+    songDiv.classList.add('qv-song');
+    songDiv.dataset.sin = JSON.stringify(apiBridge.queue.current);
+    if(apiBridge.queue.current.title != undefined) {
+      songDiv.innerHTML = `<h2>${apiBridge.queue.current.title}</h2><p>${apiBridge.queue.current.artist}</p>`;
+    } else {
+      songDiv.innerHTML = `<h2>No song playing</h2><p>Play something!<p>`;
+    }
+    document.getElementById('queuecurr').appendChild(songDiv);
+    apiBridge.queue.songsRight.forEach(song => {
+      const songDiv = document.createElement('div');
+      songDiv.classList.add('qv-song');
+      songDiv.classList.add('can-be-preloaded');
+      songDiv.dataset.sin = JSON.stringify(song)
+      songDiv.innerHTML = `<h2>${song.title}</h2><p>${song.artist}</p>`;
+      document.getElementById('queuenext').appendChild(songDiv);
+    });
+    document.querySelectorAll('.can-be-preloaded').forEach((song) => {
+      // periodically check if it's url is preloaded in apiBridges.audioBuffers
+      let gurl = apiBridge.rawURL('/rest/stream?id=' + song.dataset.sid);
+      let a = setInterval(() => {
+        if (apiBridge.audioBuffers[gurl] != null) {
+          song.classList.add('preloaded');
+          clearInterval(a);
+        }
+      }, 500);
+      song.onclick = async () => {
+        await apiBridge.music.playSong(JSON.parse(song.dataset.sin), apiBridge.queue.infoPull);
+      }
+    });
+  }
+
+  if(apiBridge.queue.songsLeft != null) queueSetup();
+</script>

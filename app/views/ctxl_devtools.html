@@ -1,0 +1,141 @@
+<div id="nuidet">
+  <p>Nougat: UI DevTools</p>
+  <div class="view-section">
+    <h3>apibridge.now</h3>
+    <p>Buffer Status: <span class="bs">Loading</span></p>
+    <p>Real-Time Clock: <span class="rtc">0</span></p>
+    <p>Tracker-Loop: <span class="cloop"></span></p>
+  </div>
+  <div class="view-section">
+    <h3>Player</h3>
+    <p class="url">Server URL:</p>
+    <p>Volume: <span class="vol"></span></p>
+    <p>Song: <span class="song"></span></p>
+  </div>
+  <div class="view-section">
+    <p>Reload CTXL views</p>
+    <div class="view-reloaders view-list"></div>
+  </div>
+  <div class="view-section">
+    <p>Open CTXL views</p>
+    <div class="unopened-views view-list"></div>
+  </div>
+</div>
+<button class="nuidttoggle">Open/Close NougatDevTools</button>
+<style>
+  .view-section {
+    display: flex;
+    flex-direction: column;
+    background-color: rgba(255,255,255,0.1);
+    padding: 10px;
+    border-radius: 5px;
+  }
+  .view-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 10px;
+    cursor: pointer;
+  }
+  #nuidet {
+    background-color: rgba(0,0,0,0.85);
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    padding: 10px;
+    width: max-content;
+    height: max-content;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 5px;
+  }
+</style>
+<script>
+  import apiBridge from './apiBridge.js'
+  if (!apiBridge.testConnectionToAppMain('devtools')) console.error('[devtools] Connection to APIBridge failed, the view will not work as expected')
+  if (!apiBridge.devtools) {
+    console.error('[devtools] This view has been disabled with "apiBridge.devtools = false". Hiding the view.')
+    document.getElementById('nuidet').style.display = 'none';
+    document.querySelector('.nuidttoggle').style.display = 'none';
+  }
+  const uirl = document.querySelector('.view-reloaders');
+  const uovl = document.querySelector('.unopened-views');
+  const nuidet = document.getElementById('nuidet');
+  let drag = false;
+  let offsetX, offsetY;
+
+  nuidet.addEventListener('mousedown', (e) => {
+    drag = true;
+    const rect = nuidet.getBoundingClientRect();
+    offsetX = e.clientX - rect.left;
+    offsetY = e.clientY - rect.top;
+  });
+
+  document.addEventListener('mouseup', () => drag = false);
+
+  document.addEventListener('mousemove', (e) => {
+    if (drag) {
+      const nuidetParent = nuidet;
+      const parentRect = nuidetParent.getBoundingClientRect();
+      nuidetParent.style.top = e.clientY - offsetY + 'px';
+      nuidetParent.style.left = e.clientX - offsetX + 'px';
+    }
+  });
+  function ctxl_devtools_closing() {
+    console.log('bye NDeTLoop')
+    clearInterval(ndetloop);
+  }
+  apiBridge.ctxl.onclose['ctxl_progress'] = ctxl_devtools_closing;
+  let ndetloop = setInterval(() => {
+    uirl.innerHTML = '';
+    uovl.innerHTML = '';
+    if (!apiBridge.ctxl.opened.includes('ctxl_progress')) {
+      document.querySelector('#nowplaying').style.display = 'block';
+    } else {
+      document.querySelector('#nowplaying').style.display = 'none';
+    }
+    const generalViews = apiBridge.ctxl.views;
+    generalViews.forEach(view => {
+      if (apiBridge.ctxl.opened.includes(view)) return;
+      const btn = document.createElement('button');
+      btn.innerText = 'Open ' + view;
+      btn.onclick = () => {
+        apiBridge.ctxl.nonDestructiveView(view);
+      };
+      uovl.appendChild(btn);
+    });
+    const views = apiBridge.ctxl.opened;
+    views.forEach(view => {
+      const btn = document.createElement('button');
+      btn.innerText = 'Reload ' + view;
+      btn.onclick = () => {
+        apiBridge.ctxl.reloadView(view);
+      };
+      uirl.appendChild(btn);
+    });
+
+    //TODO: move this into the navbar where #volume is
+    if (!apiBridge.now.loadingBuffer && !apiBridge.now.firstInit) document.querySelector('#volume').value = apiBridge.now.gainNode.gain.value * 100;
+
+    const bs = document.querySelector('.bs');
+    bs.innerText = apiBridge.now.status ? 'Loaded' : 'Loading';
+    document.querySelector('.rtc').innerText = apiBridge.now.rtc;
+    document.querySelector('.cloop').innerText = apiBridge.now.cloop;
+    if (!apiBridge.now.loadingBuffer && !apiBridge.now.firstInit) document.querySelector('.vol').innerText = apiBridge.now.gainNode.gain.value * 100;
+    const song = document.querySelector('.song');
+    const csong = JSON.parse(apiBridge.localStorageHandler.get('playing'));
+    if (csong == null) {
+      song.innerText = 'No song playing';
+    } else {
+      song.innerText = csong.song.title + ' by ' + csong.song.artist;
+    }
+    const url = document.querySelector('.url');
+    url.innerText = 'Server URL: ' + apiBridge.server;
+  }, 1000);
+
+  document.querySelector('.nuidttoggle').onclick = () => {
+    const nuidet = document.getElementById('nuidet');
+    nuidet.style.display = nuidet.style.display === 'none' ? 'flex' : 'none';
+  }
+</script>

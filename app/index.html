@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nougat</title>
+</head>
+<body>
+  <div id="toasts"></div>
+  <script type="module" src="app.js"></script>
+  <style>
+    #toasts {
+      position: fixed;
+      top: 10%;
+      right: 50%;
+      transform: translateX(50%);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      z-index: 10000;
+    }
+    .toast {
+      padding: 10px;
+      background-color: #577;
+      color: white;
+      border-radius: 5px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      animation: toast cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.5s;
+      cursor: pointer;
+    }
+    @keyframes toast {
+      from {
+        transform: translateY(-100%) scale(0.5);
+        opacity: 0;
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+    @keyframes fadeout {
+      from {
+        opacity: 1;
+      }
+      to {
+        opacity: 0;
+      }
+    }
+    :root {
+      --queue-width: 20%;
+      --navbar-height: 5rem;
+      --navbar-text-size: 2em;
+    }
+    #ctxl-view-cont > :nth-child(2) {
+      margin-top: var(--navbar-height);
+    }
+    @import url('https://fonts.googleapis.com/css2?family=Rethink+Sans&display=swap');
+    body {
+      margin: 0 auto;
+      padding: 0 auto;
+      overflow-y: scroll;
+      scrollbar-width: none;
+      font-family: 'Rethink Sans', sans-serif;
+      background-color: #222;
+      color: white;
+    }
+    button {
+      border: 1px solid #455;
+      border-radius: 5px;
+      padding: 10px;
+      background-color: #444;
+      box-shadow: 0 0 2px #000;
+      color: white;
+      cursor: pointer;
+    }
+  </style>
+</body>
+</html>

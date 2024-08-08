@@ -1,0 +1,193 @@
+<div id="viewprog">
+  <h2 id="csong">No song playing</h2>
+  <div id="controls">
+    <button id="css">Scrobble</button>
+    <button id="previous">⮜</button>
+    <button id="play-pause">⏯</button>
+    <button id="next">⮞</button>
+  </div>
+  <input type="range" name="progress" id="progress">
+  <p id="ctime">
+    <span id="left">0:00</span> &nbsp; <span id="right">0:00</span>
+  </p>
+  <div class="topright">
+    <button id="progclose">Close</button>
+  </div>
+  <div class="vpresize"></div>
+</div>
+<style>
+  .vpresize {
+    width: 100%;
+    height: 10px;
+    background-color: #333;
+    cursor: ns-resize;
+  }
+  #viewprog #controls {
+    text-align: center;
+    display: flex;
+    justify-content: center;
+    flex-direction: row;
+    gap: 10px;
+  }
+  #viewprog #controls button {
+    font-size: 1.5em;
+    border: 0;
+    border-radius: 5px;
+    background-color: #333;
+    color: white;
+  }
+  #viewprog #controls button:hover {
+    background-color: #555;
+
+  }
+  #viewprog {
+    transition-duration: .125s;
+    text-align: center;
+    position: fixed;
+    bottom: 10px;
+    left: 50%;
+    transform: translateX(-70%);
+    width: 50%;
+    border-radius: 5px;
+    padding: 10px;
+    background-color: #333;
+    color: white;
+  }
+  #viewprog #progress {
+    width: 100%;
+  }
+
+  #viewprog #ctime {
+    text-align: center;
+  }
+
+  #viewprog #ctime #left {
+    float: left;
+  }
+
+  #viewprog #ctime #right {
+    float: right;
+  }
+
+  #css {
+    display: none;
+  }
+</style>
+<script>
+  import apiBridge from './apiBridge.js'
+  if (!apiBridge.testConnectionToAppMain('progress')) console.error('[progress] Connection to APIBridge failed, the view will not work as expected')
+  
+  const vpresize = document.querySelector('.vpresize');
+  let resizing = false;
+  // vpresize.onmousedown = () => {
+  //   resizing = true;
+  // }
+  // vpresize.onmouseup = () => {
+  //   resizing = false;
+  // }
+  vpresize.onmousemove = (ev) => {
+    if(!resizing) return;
+    document.getElementById('viewprog').style.width = ev.clientX + 'px';
+  }
+
+
+  const viewprog = document.getElementById('viewprog');
+  viewprog.draggable = true;
+  let dragging = false;
+  viewprog.ondrag = (ev) => {
+    viewprog.style.left = ev.clientX + 'px';
+    viewprog.style.bottom = window.innerHeight - ev.clientY + 'px';
+  }
+  viewprog.ondragstart = (ev) => {
+    if(!dragging) return;
+    viewprog.style.transitionDuration = '0s';
+    viewprog.style.position = 'fixed';
+    viewprog.style.left = ev.clientX + 'px';
+    viewprog.style.bottom = window.innerHeight - ev.clientY + 'px';
+    dragging = true;
+  }
+  viewprog.onmousemove = (ev) => {
+    if(!dragging) return;
+    viewprog.style.transitionDuration = '0s';
+    viewprog.style.left = ev.clientX + 'px';
+    viewprog.style.bottom = window.innerHeight - ev.clientY - 20+ 'px';
+  }
+  // viewprog.onmousedown = () => {
+  //   dragging = true;
+  // }
+  // viewprog.onmouseup = () => {
+  //   dragging = false;
+  // }
+
+  const mktimestamp = (time) => {
+    let minutes = Math.floor(time / 60);
+    let seconds = Math.floor(time % 60);
+    return minutes + ':' + seconds;
+  }
+  const mkPaddedTimestamp = (time) => {
+    let minutes = Math.floor(time / 60);
+    let seconds = Math.floor(time % 60);
+    return minutes + ':' + (seconds < 10 ? '0' + seconds : seconds);
+  }
+  function progclose() {
+    clearInterval(clop);
+    apiBridge.ctxl.closeView('ctxl_progress')
+  }
+  function ctxl_progress_closing() {
+    console.log('bye clop')
+    clearInterval(clop);
+  }
+  apiBridge.ctxl.onclose['ctxl_progress'] = ctxl_progress_closing;
+  const loopy = () => {
+    let csong = JSON.parse(apiBridge.localStorageHandler.get('playing'));
+    if(csong == null) {
+      progress.max = 100;
+      progress.value = 0;
+      document.getElementById('left').innerText = '0:00';
+      document.getElementById('right').innerText = '0:00';
+      document.querySelector('#csong').innerText = 'No song playing';
+      document.querySelector('#css').style.display = 'none';
+      return;
+    }
+    progress.max = apiBridge.localStorageHandler.get('playingDuration') || 100;
+    progress.value = apiBridge.now.rtc || apiBridge.localStorageHandler.get('playingTime') || 0;
+    // document.getElementById('left').innerText = apiBridge.now.rtc || apiBridge.localStorageHandler.get('playingTime') || 0;
+    // document.getElementById('right').innerText = apiBridge.now.buffer.duration || apiBridge.localStorageHandler.get('playingDuration') || 100;
+    document.getElementById('left').innerText = mkPaddedTimestamp(apiBridge.now.rtc);
+    document.getElementById('right').innerText = mkPaddedTimestamp(apiBridge.localStorageHandler.get('playingDuration'));
+    let scrobbledStatus = '';
+    if (apiBridge.localStorageHandler.get('scrobbled_' + csong.song.id) == 'true') {
+      scrobbledStatus = 'Scrobbled';
+    } else {
+      scrobbledStatus = 'Not scrobbled';
+    }
+    if(apiBridge.now.rtc >= apiBridge.localStorageHandler.get('playingDuration') / 2 && apiBridge.localStorageHandler.get('scrobbled_' + csong.song.id) != 'true') {
+      document.getElementById('css').style.display = 'block';
+    } else {
+      document.getElementById('css').style.display = 'none';
+    }
+    document.querySelector('#csong').innerText = csong.song.title + ' by ' + csong.song.artist + ' | ' + scrobbledStatus;
+  };
+  loopy();
+  const clop = setInterval(() => {
+    loopy()
+  }, 1000);
+  progress.oninput = () => {
+    apiBridge.now.setTime(progress.value, apiBridge.now.buffer);
+    apiBridge.now.pause();
+    apiBridge.now.resume();
+  }
+  document.querySelector('#play-pause').onclick = () => {
+    if(apiBridge.now.status) 
+      apiBridge.now.pause();
+    else 
+      apiBridge.now.resume();
+  }
+  document.querySelector('#previous').onclick = () => {
+    apiBridge.queue.previous();
+  }
+  document.querySelector('#next').onclick = () => {
+    apiBridge.queue.next();
+  }
+  document.querySelector('#progclose').onclick = progclose;
+</script>

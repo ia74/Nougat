@@ -1,0 +1,68 @@
+<h1>Login</h1>
+<p id="login-status">Logs<br />Checking for existing credentials.<br /></p>
+
+<div id="login-form">
+  <input type="text" id="navidrome_user" placeholder="Username" />
+  <input type="password" id="navidrome_pass" placeholder="Password" />
+  <input type="url" id="navidrome_url" placeholder="Navidrome/Subsonic URL">
+  <button id="login">Login</button>
+</div>
+
+<style>
+  h1 {
+    text-align: center;
+  }
+
+  #login-status {
+    text-align: center;
+  }
+
+  #login-form {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+    max-width: 300px;
+    margin: 0 auto;
+    background-color: #f0f0f0;
+    padding: 10px;
+    border-radius: 5px;
+  }
+</style>
+
+<script type="module">
+  import apiBridge from './apiBridge.js'
+  if (!apiBridge.testConnectionToAppMain('login')) console.error('[login] Connection to APIBridge failed, the view will not work as expected')
+
+  const loginStatus = document.getElementById('login-status');
+  const searchFor = ['navidrome_user', 'navidrome_salt', 'navidrome_hash', 'navidrome_url'];
+  let found = 0;
+  searchFor.forEach((item) => {
+    if (apiBridge.localStorageHandler.get(item) != null) {
+      found++;
+    }
+  });
+  let authNext = '';
+  if (found == searchFor.length) {
+    authNext = 'Authenticating you..';
+    let authStatus = await apiBridge.authenticateApi(apiBridge.localStorageHandler.get('navidrome_user'), -1, apiBridge.localStorageHandler.get('navidrome_salt'), apiBridge.localStorageHandler.get('navidrome_hash'));
+    if (authStatus.status == 'ok') {
+      apiBridge.ctxl.closeView('ctxl_login');
+    }
+  } else {
+    authNext = 'You need to login!';
+    document.querySelector('#login').onclick = async () => {
+      apiBridge.authenticateApi(document.getElementById('navidrome_user').value, document.getElementById('navidrome_pass').value, -1, -1, document.getElementById('navidrome_url').value)
+        .then((c) => {
+          if (c.status == 'ok')
+            apiBridge.ctxl.closeView('ctxl_login');
+          else
+            loginStatus.innerHTML = "Authentication failed, please try again.<br/>" + c;
+        })
+        .catch((e) => {
+          loginStatus.innerHTML = "Authentication failed, please try again.<br/>" + e;
+        })
+    }
+  }
+  loginStatus.innerHTML += `${authNext}<br/>`;
+</script>
