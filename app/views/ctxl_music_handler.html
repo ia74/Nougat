@@ -30,10 +30,15 @@
       buffer = audioBuffers[url];
     } else {
       const response = await fetch(url);
+      apiBridge.cve.emit('loading_inc', 'Buffer loading: Got a response.<br/>');
       const arrayBuffer = await response.arrayBuffer();
+      apiBridge.cve.emit('loading_inc', 'Buffer loading: Turned into arrayBuffer.<br/>');
       buffer = await audioCtx.decodeAudioData(arrayBuffer);
+      apiBridge.cve.emit('loading_inc', 'Buffer loading: Decoded audio data.<br/>');
       audioBuffers[url] = buffer;
+      apiBridge.cve.emit('loading_inc', 'Buffer loading: Loaded & cached.<br/>');
     }
+    apiBridge.cve.emit('loading_inc', 'Buffer loading: Function end<br/>');
   }
 
   const playSong = async (song, album, type="album") => {

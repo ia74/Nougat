@@ -21,7 +21,6 @@
     <div class="unopened-views view-list"></div>
   </div>
 </div>
-<button class="nuidttoggle">Open/Close NougatDevTools</button>
 <style>
   .view-section {
     display: flex;
@@ -49,12 +48,14 @@
     flex-direction: column;
     justify-content: space-between;
     gap: 5px;
+    height: max-content;
+    z-index: 9999;
   }
 </style>
 <script>
   import apiBridge from './apiBridge.js'
   if (!apiBridge.testConnectionToAppMain('devtools')) console.error('[devtools] Connection to APIBridge failed, the view will not work as expected')
-  if (!apiBridge.devtools) {
+  if (!apiBridge.devTools) {
     console.error('[devtools] This view has been disabled with "apiBridge.devtools = false". Hiding the view.')
     document.getElementById('nuidet').style.display = 'none';
     document.querySelector('.nuidttoggle').style.display = 'none';
@@ -62,9 +63,6 @@
   const uirl = document.querySelector('.view-reloaders');
   const uovl = document.querySelector('.unopened-views');
   const nuidet = document.getElementById('nuidet');
-  let drag = false;
-  let offsetX, offsetY;
-
   nuidet.addEventListener('mousedown', (e) => {
     drag = true;
     const rect = nuidet.getBoundingClientRect();
@@ -82,6 +80,12 @@
       nuidetParent.style.left = e.clientX - offsetX + 'px';
     }
   });
+
+  nuidet.ondrag = (ev) => {
+    nuidet.style.top = ev.clientY - offsetY + 'px';
+    nuidet.style.left = ev.clientX - offsetX + 'px';
+  }
+
   function ctxl_devtools_closing() {
     console.log('bye NDeTLoop')
     clearInterval(ndetloop);

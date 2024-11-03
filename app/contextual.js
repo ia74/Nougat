@@ -1,3 +1,8 @@
+/**
+ * [contextual.js]{@link https://github.com/ia74/contextual}
+ * @author ia74
+ * @version 1.0.0
+ */
 const ctxl = {
   view_container: "#ctxl-view-cont",
   as: 'html',

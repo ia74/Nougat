@@ -1,0 +1,110 @@
+<div id="lyrics">
+  <div id="lyrics-content">
+  </div>
+</div>
+
+<style>
+
+  #lyrics {
+    /* a sidebar */
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: var(--queue-width);
+    margin-top: var(--navbar-height);
+    height: calc(100% - var(--navbar-height) - 15px);
+    background-color: #333;
+    color: white;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 10px;
+    overflow-y: scroll;
+    scrollbar-width: none;
+  }
+  .lyric {
+    font-size: 1.5em;
+    text-align: center;
+    cursor: pointer;
+    transition-duration: .5s;
+  }
+
+  .lyric.active {
+    color: #fff;
+    scale: 1;
+    background-color: rgba(0,0,0,0.125);
+    padding: 5px;
+    border-radius: 1.5rem;
+  }
+  .lyric.inactive {
+    scale: 0.85;
+    color: #999;
+  }
+</style>
+
+<script type="module">
+  import apiBridge from './apiBridge.js'
+  if (!apiBridge.testConnectionToAppMain('content/lyrics')) console.error('[content/lyrics] Connection to APIBridge failed, the view will not work as expected')
+  apiBridge._lyrics = {
+    lyrics: null,
+    last: {time: 0, duration: 0, lyric: ''},
+    interval: null
+  };
+  apiBridge.cve.on("music_play_start", doGet);
+  if(apiBridge.playing.song) doGet(apiBridge.playing.song);
+
+  function getLyricsFor(song) {
+    let url = `https://lrclib.net/api/get?artist_name=${encodeURIComponent(song.artist)}&track_name=${encodeURIComponent(song.title)}&album_name=${encodeURIComponent(song.album)}&duration=${song.duration}`;
+    let lyricMap = {};
+    if(!localStorage.getItem('lyrics')) localStorage.setItem('lyrics', JSON.stringify(lyricMap));
+    lyricMap = JSON.parse(localStorage.getItem('lyrics'));
+
+    if(lyricMap[song]) return lyricMap[song];
+
+    fetch(url).then((r)=>r.json()).then(res => {
+      lyricMap[song] = parseLyrics(res.syncedLyrics.toString().split("\n"));
+      localStorage.setItem('lyrics', JSON.stringify(lyricMap));
+      return lyricMap[song];
+    })
+  }
+
+  async function doGet(song) {
+    apiBridge._lyrics.lyrics = null;
+    if (apiBridge._lyrics.interval) clearInterval(apiBridge._lyrics.interval);
+    apiBridge._lyrics.lyrics = await getLyricsFor(song);
+      document.getElementById('lyrics-content').innerHTML = apiBridge._lyrics.lyrics.map(lyric => `<p class="lyric inactive" id="ly${lyric.time}">${lyric.lyric}</p>`).join('');
+      document.getElementById('lyrics-content').scrollTo(0, 0);
+      apiBridge._lyrics.interval = setInterval(() => {
+        if (apiBridge._lyrics.lyrics) {
+          const lyrics = apiBridge._lyrics.lyrics;
+          const time = apiBridge.now.rtc
+          const currentLyric = lyrics.find(lyric => lyric.time <= time && lyric.time + lyric.duration >= time);
+          if(currentLyric) apiBridge._lyrics.last = currentLyric;
+          document.querySelectorAll('#lyrics-content > p').forEach(p => {
+            p.classList.remove('active');
+            p.classList.add('inactive');
+          });
+          document.getElementById(`ly${apiBridge._lyrics.last.time}`).classList.add('active');
+          document.getElementById(`ly${apiBridge._lyrics.last.time}`).classList.remove('inactive');
+          document.getElementById(`ly${apiBridge._lyrics.last.time}`).scrollIntoView({behavior: 'smooth', block: 'center'});
+        }
+      }, 1000);
+  }
+
+  function parseLyrics(lyrics) {
+    const parsedLyrics = [];
+    lyrics.forEach(lyric => {
+      const time = lyric.match(/\[(\d+):(\d+).(\d+)\]/);
+      if (time) {
+        const timeInSeconds = parseInt(time[1]) * 60 + parseInt(time[2]) + parseInt(time[3]) / 100;
+        const lyricText = lyric.replace(/\[(\d+):(\d+).(\d+)\]/, '');
+        parsedLyrics.push({
+          time: timeInSeconds,
+          duration: 2,
+          lyric: lyricText
+        });
+      }
+    });
+    return parsedLyrics;
+  }
+</script>

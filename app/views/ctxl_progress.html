@@ -41,7 +41,6 @@
 
   }
   #viewprog {
-    transition-duration: .125s;
     text-align: center;
     position: fixed;
     bottom: 10px;
@@ -98,26 +97,11 @@
     viewprog.style.left = ev.clientX + 'px';
     viewprog.style.bottom = window.innerHeight - ev.clientY + 'px';
   }
-  viewprog.ondragstart = (ev) => {
-    if(!dragging) return;
-    viewprog.style.transitionDuration = '0s';
-    viewprog.style.position = 'fixed';
+
+  viewprog.ondragend = (ev) => {
     viewprog.style.left = ev.clientX + 'px';
     viewprog.style.bottom = window.innerHeight - ev.clientY + 'px';
-    dragging = true;
   }
-  viewprog.onmousemove = (ev) => {
-    if(!dragging) return;
-    viewprog.style.transitionDuration = '0s';
-    viewprog.style.left = ev.clientX + 'px';
-    viewprog.style.bottom = window.innerHeight - ev.clientY - 20+ 'px';
-  }
-  // viewprog.onmousedown = () => {
-  //   dragging = true;
-  // }
-  // viewprog.onmouseup = () => {
-  //   dragging = false;
-  // }
 
   const mktimestamp = (time) => {
     let minutes = Math.floor(time / 60);

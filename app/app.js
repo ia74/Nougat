@@ -3,7 +3,7 @@ import ctxl from './contextual.js';
 import './md5.js';
 
 //TODO: Change this if you want to turn DevTools on or off
-apiBridge.devTools = false; // false: off, true: on
+apiBridge.devTools = true; // false: off, true: on
 
 apiBridge.localStorageHandler = {
   set: (key, value) => {
@@ -97,6 +97,11 @@ apiBridge.music = {
       return res.album;
     });
   },
+  playlist: (id) => {
+    return apiBridge.subsonicRequest('/rest/getPlaylist.view?id=' + id, 'GET', null).then((res) => {
+      return res.playlist;
+    });
+  },
   stream: (id) => {
     return apiBridge.raw('/rest/stream?id=' + id, 'GET', null).then((res) => {
       return res;
@@ -104,21 +109,24 @@ apiBridge.music = {
   },
   scrobble: (id, time, submission = true) => {
     console.log(id, time, submission)
-    return apiBridge.subsonicRequest('/rest/scrobble.view?id=' + id + '&time=' + time + '&submission=' + submission, 'GET', null).then((res) => {
-      return res;
-    });
+    // return apiBridge.subsonicRequest('/rest/scrobble.view?id=' + id + '&time=' + time + '&submission=' + submission, 'GET', null).then((res) => {
+    //   return res;
+    // });
   }
 }
 
 const views = [
   'ctxl_devtools',
   'ctxl_home',
+  'ctxl_playlists',
+  'ctxl_albums',
   'ctxl_navbar',
   'ctxl_progress',
   'ctxl_queue',
   'ctxl_loading',
   'ctxl_generic_album',
   'ctxl_music_handler',
+  'ctxl_lyrics',
   'ctxl_login',
 ]
 
@@ -130,6 +138,7 @@ ctxl.waitForClose('ctxl_login').then(() => {
   navidromeUrl = localStorage.getItem('navidrome_url');
   ctxl.destructiveView('ctxl_home');
   ctxl.nonDestructiveView('ctxl_devtools');
+  ctxl.nonDestructiveView('ctxl_lyrics');
   ctxl.nonDestructiveView('ctxl_music_handler');
   ctxl.nonDestructiveView('ctxl_navbar');
   ctxl.nonDestructiveView('ctxl_progress');
