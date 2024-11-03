@@ -26,7 +26,7 @@
       padding: 10px;
       background-color: #577;
       color: white;
-      border-radius: 5px;
+      border-radius: 1.5rem;
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -63,12 +63,8 @@
       --navbar-text-size: 2em;
     }
 
-    #ctxl-view-cont> :nth-child(2) {
-      margin-top: var(--navbar-height);
-    }
-
     @import url('https://fonts.googleapis.com/css2?family=Rethink+Sans&display=swap');
-
+html {    scrollbar-width: none;}
     body {
       margin: 0 auto;
       padding: 0 auto;
@@ -81,10 +77,10 @@
 
     button {
       border: 1px solid #455;
-      border-radius: 5px;
+      border-radius: 1.5rem;
       padding: 10px;
       background-color: #444;
-      box-shadow: 0 0 2px #000;
+      box-shadow: 0 0 2px 0 #000;
       color: white;
       cursor: pointer;
     }
@@ -96,7 +92,7 @@
     }
 
     .side-margin {
-      margin-left: calc(var(--queue-width) + 2%);
+      margin-left: calc(var(--queue-width));
       margin-right: calc(var(--queue-width) + 2%);
     }
   </style>

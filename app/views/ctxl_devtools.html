@@ -26,13 +26,13 @@
     display: flex;
     flex-direction: column;
     background-color: rgba(255,255,255,0.1);
-    padding: 10px;
-    border-radius: 5px;
+    padding: 2px;
+    border-radius: 1.5rem;
   }
   .view-list {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 10px;
+    gap: 2px;
     cursor: pointer;
   }
   #nuidet {
@@ -63,27 +63,21 @@
   const uirl = document.querySelector('.view-reloaders');
   const uovl = document.querySelector('.unopened-views');
   const nuidet = document.getElementById('nuidet');
-  nuidet.addEventListener('mousedown', (e) => {
-    drag = true;
-    const rect = nuidet.getBoundingClientRect();
-    offsetX = e.clientX - rect.left;
-    offsetY = e.clientY - rect.top;
-  });
 
-  document.addEventListener('mouseup', () => drag = false);
-
-  document.addEventListener('mousemove', (e) => {
-    if (drag) {
-      const nuidetParent = nuidet;
-      const parentRect = nuidetParent.getBoundingClientRect();
-      nuidetParent.style.top = e.clientY - offsetY + 'px';
-      nuidetParent.style.left = e.clientX - offsetX + 'px';
+  let draggin = false;
+  let dragg = {x: 0, y: 0};
+  nuidet.onmousedown = (e) => {
+    draggin = true;
+    dragg = {x: e.clientX - nuidet.offsetLeft, y: e.clientY - nuidet.offsetTop};
+  }
+  document.onmouseup = () => {
+    draggin = false;
+  }
+  document.onmousemove = (e) => {
+    if (draggin) {
+      nuidet.style.left = e.clientX - dragg.x + 'px';
+      nuidet.style.top = e.clientY - dragg.y + 'px';
     }
-  });
-
-  nuidet.ondrag = (ev) => {
-    nuidet.style.top = ev.clientY - offsetY + 'px';
-    nuidet.style.left = ev.clientX - offsetX + 'px';
   }
 
   function ctxl_devtools_closing() {
@@ -94,11 +88,6 @@
   let ndetloop = setInterval(() => {
     uirl.innerHTML = '';
     uovl.innerHTML = '';
-    if (!apiBridge.ctxl.opened.includes('ctxl_progress')) {
-      document.querySelector('#nowplaying').style.display = 'block';
-    } else {
-      document.querySelector('#nowplaying').style.display = 'none';
-    }
     const generalViews = apiBridge.ctxl.views;
     generalViews.forEach(view => {
       if (apiBridge.ctxl.opened.includes(view)) return;
@@ -137,9 +126,4 @@
     const url = document.querySelector('.url');
     url.innerText = 'Server URL: ' + apiBridge.server;
   }, 1000);
-
-  document.querySelector('.nuidttoggle').onclick = () => {
-    const nuidet = document.getElementById('nuidet');
-    nuidet.style.display = nuidet.style.display === 'none' ? 'flex' : 'none';
-  }
 </script>

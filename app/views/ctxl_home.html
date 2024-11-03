@@ -1,23 +1,32 @@
 <div class="hview homeview">
-  <div class="content">
-    <h2>Listen from:</h2>
-    <button id="playlists" onclick="apiBridge.openV('ctxl_playlists')">Playlists</button>
-    <button id="albums" onclick="apiBridge.openV('ctxl_albums')">Albums</button>
-  </div>
-  <h3>Navidrome on <div id="surl"></div></h3>
+  <button onclick="apiBridge.openV('ctxl_playlists')">Playlists</button>
+  <button onclick="apiBridge.openV('ctxl_albums')">Albums</button>
 </div>
 <style>
   .homeview {
-    margin-left: calc(var(--queue-width) + 1%);
+    margin-top: calc(var(--navbar-height) + 15px + .25%);
+    margin-left: calc(var(--queue-width));
+    margin-right: calc(var(--queue-width) + 2%);
+    padding: 10px;
+    background-color: #333;
+    border-radius: 1.5rem;
   }
 </style>
 
 <script type="module">
   import apiBridge from './apiBridge.js'
   if (!apiBridge.testConnectionToAppMain('content/albums')) console.error('[content/albums] Connection to APIBridge failed, the view will not work as expected')
-  document.getElementById('surl').innerHTML = apiBridge.server;
+let views = [
+  'ctxl_playlists',
+  'ctxl_albums'
+]
   function openV(view) {
-    apiBridge.ctxl.closeView('ctxl_home');
+    views.forEach((v) => {
+      if (v != view) {
+        if(apiBridge.ctxl.opened.includes(v))
+        apiBridge.ctxl.closeView(v);
+      }
+    });
     apiBridge.ctxl.nonDestructiveView(view);
   }
   apiBridge.openV = openV;

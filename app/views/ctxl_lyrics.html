@@ -8,11 +8,11 @@
   #lyrics {
     /* a sidebar */
     position: fixed;
-    bottom: 0;
-    left: 0;
-    width: var(--queue-width);
-    margin-top: var(--navbar-height);
-    height: calc(100% - var(--navbar-height) - 15px);
+    bottom: 1%;
+    left: .5%;
+    width: calc(var(--queue-width) - 2%);
+    margin-top: calc(var(--navbar-height) + 15px);
+    height: calc(100% - var(--navbar-height) - 4%);
     background-color: #333;
     color: white;
     display: flex;
@@ -21,6 +21,7 @@
     padding: 10px;
     overflow-y: scroll;
     scrollbar-width: none;
+    border-radius: 1.5rem;
   }
   .lyric {
     font-size: 1.5em;
@@ -54,17 +55,18 @@
   if(apiBridge.playing.song) doGet(apiBridge.playing.song);
 
   function getLyricsFor(song) {
+    console.log("Grabbing for ", song)
+    let fmt = `${song.title}${song.artist}${song.album}${song.duration}`;
     let url = `https://lrclib.net/api/get?artist_name=${encodeURIComponent(song.artist)}&track_name=${encodeURIComponent(song.title)}&album_name=${encodeURIComponent(song.album)}&duration=${song.duration}`;
     let lyricMap = {};
     if(!localStorage.getItem('lyrics')) localStorage.setItem('lyrics', JSON.stringify(lyricMap));
     lyricMap = JSON.parse(localStorage.getItem('lyrics'));
+    if(lyricMap[fmt]) return lyricMap[fmt];
 
-    if(lyricMap[song]) return lyricMap[song];
-
-    fetch(url).then((r)=>r.json()).then(res => {
-      lyricMap[song] = parseLyrics(res.syncedLyrics.toString().split("\n"));
+    return fetch(url).then((r)=>r.json()).then(res => {
+      lyricMap[fmt] = parseLyrics(res.syncedLyrics.toString().split("\n"));
       localStorage.setItem('lyrics', JSON.stringify(lyricMap));
-      return lyricMap[song];
+      return lyricMap[fmt];
     })
   }
 
@@ -72,6 +74,7 @@
     apiBridge._lyrics.lyrics = null;
     if (apiBridge._lyrics.interval) clearInterval(apiBridge._lyrics.interval);
     apiBridge._lyrics.lyrics = await getLyricsFor(song);
+    console.log(apiBridge._lyrics.lyrics);
       document.getElementById('lyrics-content').innerHTML = apiBridge._lyrics.lyrics.map(lyric => `<p class="lyric inactive" id="ly${lyric.time}">${lyric.lyric}</p>`).join('');
       document.getElementById('lyrics-content').scrollTo(0, 0);
       apiBridge._lyrics.interval = setInterval(() => {

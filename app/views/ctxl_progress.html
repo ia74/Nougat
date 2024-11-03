@@ -1,39 +1,64 @@
 <div id="viewprog">
-  <h2 id="csong">No song playing</h2>
+  <strong id="csongtitle">Song</strong>
+  <strong id="csongartist">Artist</strong>
+  <input type="range" name="progress" id="progress">
+  <p id="ctime">
+    <span id="left">0:00</span> &nbsp; <span id="right">0:00</span>
+  </p>
   <div id="controls">
     <button id="css">Scrobble</button>
     <button id="previous">⮜</button>
     <button id="play-pause">⏯</button>
     <button id="next">⮞</button>
   </div>
-  <input type="range" name="progress" id="progress">
-  <p id="ctime">
-    <span id="left">0:00</span> &nbsp; <span id="right">0:00</span>
-  </p>
-  <div class="topright">
-    <button id="progclose">Close</button>
+  <div class="flex-row">
+    <span id="cscrobble">Not scrobbled</span>
+  <button id="progclose">Close</button>
   </div>
-  <div class="vpresize"></div>
 </div>
 <style>
-  .vpresize {
-    width: 100%;
-    height: 10px;
+
+  #progress::-webkit-slider-thumb {
     background-color: #333;
-    cursor: ns-resize;
+    border: 0;
+    border-radius: 1.5rem;
+    width: 1.5rem;
+    height: 1.5rem;
+    cursor: pointer;
+  }
+
+  #progress {
+    width: 100%;
+    -webkit-appearance: none;
+    height: 1.5rem;
+    border-radius: 1.5rem;
+    background-color: #444;
+    outline: none;
+    cursor: pointer;
+  }
+
+  .flex-row {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
   }
   #viewprog #controls {
     text-align: center;
     display: flex;
+    align-items: center;
     justify-content: center;
     flex-direction: row;
-    gap: 10px;
+    /* gap: 10px; */
   }
   #viewprog #controls button {
     font-size: 1.5em;
+    font-family: "Rethink Sans", sans-serif;
     border: 0;
-    border-radius: 5px;
+    border-radius: 1.5rem;
     background-color: #333;
+    box-shadow: none;
     color: white;
   }
   #viewprog #controls button:hover {
@@ -43,11 +68,11 @@
   #viewprog {
     text-align: center;
     position: fixed;
-    bottom: 10px;
+    bottom: 1%;
     left: 50%;
-    transform: translateX(-70%);
+    transform: translateX(-52%);
     width: 50%;
-    border-radius: 5px;
+    border-radius: 1.5rem;
     padding: 10px;
     background-color: #333;
     color: white;
@@ -60,12 +85,18 @@
     text-align: center;
   }
 
-  #viewprog #ctime #left {
-    float: left;
+  #cscrobble {
+    font-size: 0.75em;
   }
 
-  #viewprog #ctime #right {
+  #viewprog #ctime #left, #csongtitle {
+    float: left;
+    height: max-content;
+  }
+
+  #viewprog #ctime #right, #csongartist {
     float: right;
+    height: max-content;
   }
 
   #css {
@@ -75,19 +106,6 @@
 <script>
   import apiBridge from './apiBridge.js'
   if (!apiBridge.testConnectionToAppMain('progress')) console.error('[progress] Connection to APIBridge failed, the view will not work as expected')
-  
-  const vpresize = document.querySelector('.vpresize');
-  let resizing = false;
-  // vpresize.onmousedown = () => {
-  //   resizing = true;
-  // }
-  // vpresize.onmouseup = () => {
-  //   resizing = false;
-  // }
-  vpresize.onmousemove = (ev) => {
-    if(!resizing) return;
-    document.getElementById('viewprog').style.width = ev.clientX + 'px';
-  }
 
 
   const viewprog = document.getElementById('viewprog');
@@ -116,6 +134,7 @@
   function progclose() {
     clearInterval(clop);
     apiBridge.ctxl.closeView('ctxl_progress')
+    document.querySelector('#nowplaying').style.display = 'block';
   }
   function ctxl_progress_closing() {
     console.log('bye clop')
@@ -150,7 +169,9 @@
     } else {
       document.getElementById('css').style.display = 'none';
     }
-    document.querySelector('#csong').innerText = csong.song.title + ' by ' + csong.song.artist + ' | ' + scrobbledStatus;
+    document.querySelector('#csongtitle').innerText = csong.song.title;
+    document.querySelector('#csongartist').innerText = csong.song.artist;
+    document.querySelector('#cscrobble').innerText = scrobbledStatus;
   };
   loopy();
   const clop = setInterval(() => {

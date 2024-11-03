@@ -11,11 +11,12 @@
   #queueview {
     /* a sidebar */
     position: fixed;
-    bottom: 0;
-    right: 0;
+    bottom: 1%;
+    right: .5%;
     width: var(--queue-width);
     margin-top: var(--navbar-height);
-    height: calc(100% - var(--navbar-height) - 15px);
+    height: calc(100% - var(--navbar-height) - 4%);
+    border-radius: 1.5rem;
     background-color: #333;
     color: white;
     display: flex;
@@ -23,6 +24,7 @@
     gap: 10px;
     padding: 10px;
     overflow-y: scroll;
+    scrollbar-width: none;
   }
 
   .qv {
@@ -35,7 +37,7 @@
   .qv-song {
     background-color: #455;
     padding: 10px;
-    border-radius: 5px;
+    border-radius: 1.5rem;
     cursor: pointer;
   }
 

@@ -109,9 +109,9 @@ apiBridge.music = {
   },
   scrobble: (id, time, submission = true) => {
     console.log(id, time, submission)
-    // return apiBridge.subsonicRequest('/rest/scrobble.view?id=' + id + '&time=' + time + '&submission=' + submission, 'GET', null).then((res) => {
-    //   return res;
-    // });
+    return apiBridge.subsonicRequest('/rest/scrobble.view?id=' + id + '&time=' + time + '&submission=' + submission, 'GET', null).then((res) => {
+      return res;
+    });
   }
 }
 

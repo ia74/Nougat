@@ -26,6 +26,11 @@
     apiBridge.now.setVolume(e.target.value);
   }
 
+  document.querySelector('.nuidttoggle').onclick = () => {
+    const nuidet = document.getElementById('nuidet');
+    nuidet.style.display = nuidet.style.display === 'none' ? 'flex' : 'none';
+  }
+
   document.querySelector('.minimizetopbar').onclick = () => {
     const computedStyle = getComputedStyle(document.documentElement);
     const navbarHeight = computedStyle.getPropertyValue('--navbar-height');
@@ -37,16 +42,19 @@
 <style>
   #navbar {
     position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
+    top: 0.5%;
+    left: 0.5%;
+    width: calc(99% - 2rem);
     background-color: #333;
     color: white;
     display: flex;
     height: var(--navbar-height);
     justify-content: space-between;
     align-items: center;
+    border-radius: 1.5rem;
     z-index: 9999;
+    padding-left: 1rem;
+    padding-right: 1rem;
     flex-grow: 1;
   }
 
