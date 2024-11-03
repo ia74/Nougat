@@ -1,7 +1,7 @@
 /**
  * [contextual.js]{@link https://github.com/ia74/contextual}
  * @author ia74
- * @version 1.0.0
+ * @version 1.1.0
  */
 const ctxl = {
 	view_container: "#ctxl-view-cont",
@@ -16,11 +16,9 @@ const ctxl = {
 			console.log(`View ${view} not found.`);
 			return `<p>View ${view} not found.</p>`;
 		}
-    if(document.querySelectorAll(`.ctxv-${view}`).length > 0) {
-      document.querySelectorAll(`.ctxv-${view}`).forEach((script) => {
-        script.remove();
-      });
-    }
+    for(const script of document.querySelectorAll(`.ctxv-${view}`)) {
+			script.remove();
+		}
 		const view_html = document.createElement(ctxl.as);
 		view_html.id = view;
 		view_html.innerHTML = "<p>Loading...</p>";
