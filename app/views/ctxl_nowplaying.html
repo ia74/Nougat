@@ -1,0 +1,57 @@
+<div class="side-margin">
+  <h1 class="center">Now Playing</h1>
+  <div id="nowplaying">
+    <img id="np-art" src="https://via.placeholder.com/300x300" alt="Album Art">
+    <p><strong id="np-artist">Unknown</strong> - <strong id="np-song">Unknown</strong></p>
+    <p><strong id="np-album">Unknown</strong></p>
+  </div>
+  <input id="volume" type="range" min="0" max="100" step="1" value="100">
+</div>
+<style>
+
+  .center {
+    text-align: center;
+  }
+
+  #nowplaying {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 10px;
+    border-radius: 1.5rem;
+    background-color: #333;
+    color: white;
+  }
+
+  #nowplaying img {
+    width: 25%;
+    border-radius: 1.5rem;
+  }
+</style>
+
+<script type="module">
+  import apiBridge from './apiBridge.js'
+  if (!apiBridge.testConnectionToAppMain('content/nowplaying')) console.error('[content/nowplaying] Connection to APIBridge failed, the view will not work as expected')
+  const setupNowPlayingView = (data) => {
+    const coverArt = apiBridge.rawURL('/rest/getCoverArt?id=' + data.id);
+    document.querySelector("#np-art").src = coverArt;
+    document.querySelector("#np-artist").innerText = data.artist;
+    document.querySelector("#np-album").innerText = data.album;
+    document.querySelector("#np-song").innerText = data.title;
+  }
+
+  document.querySelector('#volume').oninput = (e) => {
+    apiBridge.now.setVolume(e.target.value);
+  }
+  apiBridge.cve.on("music_volume_update", (data) => {
+    document.querySelector('#volume').value = data * 100;
+  })
+
+  if(apiBridge.playing.gainNode.gain) document.querySelector('#volume').value = apiBridge.playing.gainNode.gain.value * 100;
+  if(apiBridge.playing.song) setupNowPlayingView(apiBridge.playing.song);
+
+  apiBridge.cve.on('music_play_start', (data) => {
+    setupNowPlayingView(data);
+  });
+</script>

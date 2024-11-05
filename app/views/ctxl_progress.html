@@ -76,6 +76,7 @@
     padding: 10px;
     background-color: #333;
     color: white;
+    z-index: 2;
   }
   #viewprog #progress {
     width: 100%;
@@ -143,28 +144,28 @@
   apiBridge.ctxl.onclose['ctxl_progress'] = ctxl_progress_closing;
   const loopy = () => {
     let csong = JSON.parse(apiBridge.localStorageHandler.get('playing'));
-    if(csong == null) {
+    if(csong == null || apiBridge.playing == {}) {
       progress.max = 100;
       progress.value = 0;
       document.getElementById('left').innerText = '0:00';
       document.getElementById('right').innerText = '0:00';
-      document.querySelector('#csong').innerText = 'No song playing';
+      document.querySelector('#csongtitle').innerText = 'No song playing';
+      document.querySelector('#csongartist').innerText = 'Play any song!';
       document.querySelector('#css').style.display = 'none';
       return;
     }
-    progress.max = apiBridge.localStorageHandler.get('playingDuration') || 100;
+    const duration = apiBridge.playing.source.mediaElement.duration;
+    progress.max = duration;
     progress.value = apiBridge.now.rtc || apiBridge.localStorageHandler.get('playingTime') || 0;
-    // document.getElementById('left').innerText = apiBridge.now.rtc || apiBridge.localStorageHandler.get('playingTime') || 0;
-    // document.getElementById('right').innerText = apiBridge.now.buffer.duration || apiBridge.localStorageHandler.get('playingDuration') || 100;
     document.getElementById('left').innerText = mkPaddedTimestamp(apiBridge.now.rtc);
-    document.getElementById('right').innerText = mkPaddedTimestamp(apiBridge.localStorageHandler.get('playingDuration'));
+    document.getElementById('right').innerText = mkPaddedTimestamp(duration);
     let scrobbledStatus = '';
     if (apiBridge.localStorageHandler.get('scrobbled_' + csong.song.id) == 'true') {
       scrobbledStatus = 'Scrobbled';
     } else {
       scrobbledStatus = 'Not scrobbled';
     }
-    if(apiBridge.now.rtc >= apiBridge.localStorageHandler.get('playingDuration') / 2 && apiBridge.localStorageHandler.get('scrobbled_' + csong.song.id) != 'true') {
+    if(apiBridge.now.rtc >= duration / 2 && apiBridge.localStorageHandler.get('scrobbled_' + csong.song.id) != 'true') {
       document.getElementById('css').style.display = 'block';
     } else {
       document.getElementById('css').style.display = 'none';
@@ -173,10 +174,17 @@
     document.querySelector('#csongartist').innerText = csong.song.artist;
     document.querySelector('#cscrobble').innerText = scrobbledStatus;
   };
-  loopy();
+  const fallbackLoopy = () => {
+    try {
+      loopy()
+    } catch(e) {
+      console.error("Error while setting progress bar", e)
+    }
+  }
   const clop = setInterval(() => {
-    loopy()
+    fallbackLoopy();
   }, 1000);
+  fallbackLoopy();
   progress.oninput = () => {
     apiBridge.now.setTime(progress.value, apiBridge.now.buffer);
     apiBridge.now.pause();

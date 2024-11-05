@@ -2,8 +2,11 @@
   <div id="modal-content-genericalbum">
     <button id="close-ga">X</button>
     <div class="info">
-      <h1 id="album-title">Album Title</h1>
       <img id="album-cover" src="https://via.placeholder.com/300" alt="Album Cover">
+      <div class="col">
+        <strong id="album-title">Album Title</strong>
+        <strong id="album-artist">Album Artist</strong>
+      </div>
     </div>
     <br>
     <div id="songs">
@@ -14,7 +17,30 @@
     </div>
   </div>
 </div>
+<div id="modal-ga-context">
+  <p><strong>Selected Item</strong></p>
+  <div class="ga-actions">
+    <button id="play-ga">Play</button>
+    <button id="next-queue-ga">Play Next</button>
+    <button id="queue-ga">Queue</button>
+    <button id="add-ga">Add to Playlist</button>
+  </div>
+</div>
 <style>
+  #modal-ga-context {
+    display: none;
+    position: fixed;
+    z-index: 2;
+    left: 0;
+    top: 0;
+    /* overflow-y: auto; */
+    scrollbar-width: none;
+    background-color: rgb(0, 0, 0);
+    background-color: rgba(0, 0, 0, 0.25);
+    border-radius: 1.5rem;
+    padding: 1rem;
+  }
+
   .modal-genericalbum {
     display: none;
     position: fixed;
@@ -26,8 +52,8 @@
     height: 100%;
     /* overflow-y: auto; */
     scrollbar-width: none;
-    background-color: rgb(0,0,0);
-    background-color: rgba(0,0,0,0.9);
+    background-color: rgb(0, 0, 0);
+    background-color: rgba(0, 0, 0, 0.9);
   }
 
 
@@ -47,7 +73,17 @@
 
   .info {
     display: flex;
-    gap: 20px;
+    flex-direction: column;
+    gap: 1rem;
+    font-size: 1.5rem;
+  }
+
+  .col {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    align-items: start;
+    justify-content: start;
   }
 
   #songs {
@@ -61,7 +97,7 @@
     display: flex;
     justify-content: space-between;
     cursor: pointer;
-    background-color: rgba(0,0,0,0.24);
+    background-color: rgba(0, 0, 0, 0.24);
     padding: 10px;
     border-radius: 1.5rem;
   }
@@ -75,7 +111,7 @@
   }
 
   .info img {
-    height: 250px;
+    width: 250px;
     border-radius: 1.5rem;
   }
 
@@ -87,7 +123,7 @@
 </style>
 <script>
   import apiBridge from './apiBridge.js'
-  if(!apiBridge.testConnectionToAppMain('generic_album')) console.error('[generic_album] Connection to APIBridge failed, the view will not work as expected')
+  if (!apiBridge.testConnectionToAppMain('generic_album')) console.error('[generic_album] Connection to APIBridge failed, the view will not work as expected')
   apiBridge.cve.on('showAlbumView', () => {
     document.querySelector('.modal-genericalbum').style.display = 'block'
   })
@@ -96,28 +132,105 @@
     const sec = Math.floor(seconds % 60);
     return `${minutes}:${sec < 10 ? '0' + sec : sec}`;
   }
+  window.onclick = (e) => {
+    if (e.target == document.querySelector('.modal-genericalbum')) {
+      document.querySelector('.modal-genericalbum').style.display = 'none';
+    }
+    if (e.target == document.querySelector('#modal-ga-context')) {
+      document.querySelector('#modal-ga-context').style.display = 'none';
+    }
+  }
+  window.oncontextmenu = (e) => {
+    e.preventDefault();
+    if (e.target.classList.contains("song")) {
+      let Npdata = JSON.parse(e.target.dataset.song);
+      document.querySelector("#modal-ga-context").dataset.selected = JSON.stringify(Npdata);
+    } else return
+    document.getElementById('modal-ga-context').style.display = 'block';
+    document.getElementById('modal-ga-context').style.left = e.clientX + 'px';
+    document.getElementById('modal-ga-context').style.top = e.clientY + 'px';
+  }
   apiBridge.cve.on('albumClick', (data) => {
-    console.log(data)
     const album = data[0];
-    const songs = data[1].song;
-    console.log(album)
-    document.getElementById('album-title').innerText = album.title;
+    const songs = data[1];
+    console.log("GOT ALBUM", album)
+    document.getElementById('album-title').innerText = album.title || album.name;
+    document.getElementById('album-artist').innerText = album.artist || album.owner;
     document.getElementById('album-cover').src = apiBridge.rawURL('/rest/getCoverArt?id=' + album.id);
     const songsDiv = document.getElementById('songs');
     songsDiv.innerHTML = '';
+
     songs.forEach(song => {
       const songDiv = document.createElement('div');
       songDiv.classList.add('song');
+      songDiv.dataset.song = JSON.stringify(song);
       songDiv.innerHTML = `<span class="song-title">${song.title}</span><span class="song-duration">${mkPaddedTimestamp(song.duration)}</span>`;
+
       songDiv.onclick = async () => {
+        if (song.specialEmpty) {
+          apiBridge.toasts.send({
+            message: 'This playlist is empty!',
+          })
+          return;
+        };
         document.querySelector('.modal-genericalbum').style.display = 'none';
         album.isAlbum = true;
-        await apiBridge.music.playSong(song, album);
+        await apiBridge.music.playSong(song, album, album.mediaType ? album.mediaType : 'playlist');
       }
       songsDiv.appendChild(songDiv);
     });
   })
+  document.getElementById('play-ga').onclick = async () => {
+    let Npdata = JSON.parse(document.querySelector("#modal-ga-context").dataset.selected);
+    if (Npdata.specialEmpty) {
+      apiBridge.toasts.send({
+        message: 'This playlist is empty!',
+      })
+      return;
+    };
+    document.querySelector('.modal-genericalbum').style.display = 'none';
+    album.isAlbum = true;
+    await apiBridge.music.playSong(Npdata, album, album.mediaType ? album.mediaType : 'playlist');
+  }
+  document.getElementById('queue-ga').onclick = async () => {
+    let Npdata = JSON.parse(document.querySelector("#modal-ga-context").dataset.selected);
+    if (Npdata.specialEmpty) {
+      apiBridge.toasts.send({
+        message: 'This playlist is empty!',
+      })
+      return;
+    };
+    apiBridge.toasts.send({
+      message: 'Added to queue!',
+    })
+    apiBridge.queue.songsRight.push(Npdata);
+    apiBridge.cve.emit('queue_reload');
+  }
+  document.getElementById('next-queue-ga').onclick = async () => {
+    let Npdata = JSON.parse(document.querySelector("#modal-ga-context").dataset.selected);
+    if (Npdata.specialEmpty) {
+      apiBridge.toasts.send({
+        message: 'This playlist is empty!',
+      })
+      return;
+    };
+    apiBridge.toasts.send({
+      message: 'Added to queue!',
+    })
+    apiBridge.queue.songsRight.unshift(Npdata);
+    apiBridge.cve.emit('queue_reload');
+  }
+  document.getElementById('add-ga').onclick = async () => {
+    let Npdata = JSON.parse(document.querySelector("#modal-ga-context").dataset.selected);
+    if (Npdata.specialEmpty) {
+      apiBridge.toasts.send({
+        message: 'This playlist is empty!',
+      })
+      return;
+    };
+  }
   document.getElementById('close-ga').onclick = () => {
     document.querySelector('.modal-genericalbum').style.display = 'none';
+    document.querySelector('#modal-ga-context').style.display = 'none';
   }
 </script>

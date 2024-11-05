@@ -1,6 +1,8 @@
 <div class="hview homeview">
   <button onclick="apiBridge.openV('ctxl_playlists')">Playlists</button>
   <button onclick="apiBridge.openV('ctxl_albums')">Albums</button>
+  <button onclick="apiBridge.openV('ctxl_nowplaying')">Now Playing</button>
+  <button onclick="apiBridge.lyricView.expand()">Lyrics</button>
 </div>
 <style>
   .homeview {
@@ -18,16 +20,18 @@
   if (!apiBridge.testConnectionToAppMain('content/albums')) console.error('[content/albums] Connection to APIBridge failed, the view will not work as expected')
 let views = [
   'ctxl_playlists',
-  'ctxl_albums'
+  'ctxl_albums',
+  'ctxl_nowplaying'
 ]
   function openV(view) {
     views.forEach((v) => {
       if (v != view) {
-        if(apiBridge.ctxl.opened.includes(v))
-        apiBridge.ctxl.closeView(v);
+        if(apiBridge.ctxl.opened.includes(v)) apiBridge.ctxl.closeView(v);
+      } else {
+        if(apiBridge.ctxl.opened.includes(v)) apiBridge.ctxl.reloadView(v);
+        else apiBridge.ctxl.nonDestructiveView(v);
       }
     });
-    apiBridge.ctxl.nonDestructiveView(view);
   }
   apiBridge.openV = openV;
 </script>

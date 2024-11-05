@@ -15,16 +15,6 @@
     gap: 10px;
   }
 
-  #albums div {
-    border: 1px solid #333;
-    padding: 10px;
-    cursor: pointer;
-    display: flex;
-    justify-content: space-evenly;
-    flex-direction: column;
-    gap: 2px;
-  }
-
   #albums div h2 {
     font-size: 1em;
   }
@@ -38,17 +28,27 @@
   import apiBridge from './apiBridge.js'
   if (!apiBridge.testConnectionToAppMain('content/playlists')) console.error('[content/playlists] Connection to APIBridge failed, the view will not work as expected')
 
-  // const albumList = (await apiBridge.music.albumList()).album;
-  // document.querySelector('.albs-stat').innerHTML = albumList.length;
+  document.getElementById('albums').innerHTML = '<h1>Loading your playlists..</h1>';
+  const albumList = (await apiBridge.music.playlists()).playlist;
+  document.getElementById('albums').innerHTML = '';
+  document.querySelector('.albs-stat').innerHTML = albumList.length;
 
-  // albumList.forEach(album => {
-  //   const albumDiv = document.createElement('div');
-  //   albumDiv.innerHTML = "<img src=" + apiBridge.rawURL('/rest/getCoverArt?id=' + album.id) + ">" + " <h2>" + album.name + "</h2><p>" + album.artist + "</p>";
-  //   albumDiv.onclick = async () => {
-  //     const songs = await apiBridge.music.album(album.id);
-  //     apiBridge.cve.emit('albumClick', [album, songs]);
-  //     apiBridge.cve.emit('showAlbumView');
-  //   }
-  //   document.getElementById('albums').appendChild(albumDiv);
-  // });
+  albumList.forEach(album => {
+    const albumDiv = document.createElement('div');
+    albumDiv.classList.add('homepage-container');
+    albumDiv.innerHTML = "<img src=" + apiBridge.rawURL('/rest/getCoverArt?id=' + album.id) + ">" + " <h2>" + album.name + "</h2><p>" + album.artist + "</p>";
+    albumDiv.onclick = async () => {
+      const songs = await apiBridge.music.playlist(album.id);
+      if(!songs.entry) songs.entry = [
+        {
+          title: 'This playlist is empty!',
+          duration: 0,
+          specialEmpty: true
+        }
+      ]
+      apiBridge.cve.emit('albumClick', [album, songs.entry]);
+      apiBridge.cve.emit('showAlbumView');
+    }
+    document.getElementById('albums').appendChild(albumDiv);
+  });
 </script>

@@ -41,10 +41,6 @@
     cursor: pointer;
   }
 
-  .can-be-preloaded:not(.preloaded) {
-    filter: brightness(0.8);
-  }
-
   #queueprev {
     font-size: .5em;
   }
@@ -65,6 +61,10 @@
     queueSetup();
   }, 1500);
 
+  apiBridge.cve.on("queue_reload", () => {
+    queueSetup();
+  });
+
   const queueSetup = () => {
     document.getElementById('queueprev').innerHTML = '';
     document.getElementById('queuecurr').innerHTML = '';
@@ -72,7 +72,6 @@
     apiBridge.queue.songsLeft.forEach(song => {
       const songDiv = document.createElement('div');
       songDiv.classList.add('qv-song');
-      songDiv.classList.add('can-be-preloaded');
       songDiv.dataset.sin = JSON.stringify(song)
       songDiv.innerHTML = `<h2>${song.title}</h2><p>${song.artist}</p>`;
       document.getElementById('queueprev').appendChild(songDiv);
@@ -89,24 +88,13 @@
     apiBridge.queue.songsRight.forEach(song => {
       const songDiv = document.createElement('div');
       songDiv.classList.add('qv-song');
-      songDiv.classList.add('can-be-preloaded');
       songDiv.dataset.sin = JSON.stringify(song)
       songDiv.innerHTML = `<h2>${song.title}</h2><p>${song.artist}</p>`;
       document.getElementById('queuenext').appendChild(songDiv);
     });
-    document.querySelectorAll('.can-be-preloaded').forEach((song) => {
-      // periodically check if it's url is preloaded in apiBridges.audioBuffers
-      let gurl = apiBridge.rawURL('/rest/stream?id=' + song.dataset.sid);
-      let a = setInterval(() => {
-        if (apiBridge.audioBuffers[gurl] != null) {
-          song.classList.add('preloaded');
-          clearInterval(a);
-        }
-      }, 500);
-      song.onclick = async () => {
-        await apiBridge.music.playSong(JSON.parse(song.dataset.sin), apiBridge.queue.infoPull);
-      }
-    });
+    songDiv.onclick = async () => {
+      await apiBridge.music.playSong(JSON.parse(song.dataset.sin), apiBridge.queue.infoPull, apiBridge.localStorageHandler.get('playingLastType'))
+    }
   }
 
   if(apiBridge.queue.songsLeft != null) queueSetup();

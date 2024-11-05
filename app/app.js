@@ -102,13 +102,17 @@ apiBridge.music = {
       return res.playlist;
     });
   },
+  playlists:() => {
+    return apiBridge.subsonicRequest('/rest/getPlaylists.view', 'GET', null).then((res) => {
+      return res.playlists;
+    });
+  },
   stream: (id) => {
     return apiBridge.raw('/rest/stream?id=' + id, 'GET', null).then((res) => {
       return res;
     });
   },
   scrobble: (id, time, submission = true) => {
-    console.log(id, time, submission)
     return apiBridge.subsonicRequest('/rest/scrobble.view?id=' + id + '&time=' + time + '&submission=' + submission, 'GET', null).then((res) => {
       return res;
     });
@@ -120,6 +124,7 @@ const views = [
   'ctxl_home',
   'ctxl_playlists',
   'ctxl_albums',
+  'ctxl_nowplaying',
   'ctxl_navbar',
   'ctxl_progress',
   'ctxl_queue',
@@ -127,7 +132,7 @@ const views = [
   'ctxl_generic_album',
   'ctxl_music_handler',
   'ctxl_lyrics',
-  'ctxl_login',
+  'ctxl_login', 
 ]
 
 views.forEach((view) => ctxl.addView(view));

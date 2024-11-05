@@ -1,4 +1,5 @@
 <div id="lyrics">
+  <button onclick="apiBridge.toggleThing()">Expand</button>
   <div id="lyrics-content">
   </div>
 </div>
@@ -22,12 +23,15 @@
     overflow-y: scroll;
     scrollbar-width: none;
     border-radius: 1.5rem;
+    transition-duration: .5s;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
   }
   .lyric {
     font-size: 1.5em;
     text-align: center;
     cursor: pointer;
     transition-duration: .5s;
+    transition-timing-function: cubic-bezier(0.05, 0.9, 0.1, 1.05);
   }
 
   .lyric.active {
@@ -46,11 +50,55 @@
 <script type="module">
   import apiBridge from './apiBridge.js'
   if (!apiBridge.testConnectionToAppMain('content/lyrics')) console.error('[content/lyrics] Connection to APIBridge failed, the view will not work as expected')
+  
+  apiBridge.toggleThing = () => {
+    if(document.getElementById('lyrics').style.width) {
+      apiBridge.lyricView.collapse();
+    } else {
+      apiBridge.lyricView.expand();
+    }
+  }
   apiBridge._lyrics = {
     lyrics: null,
-    last: {time: 0, duration: 0, lyric: ''},
+    last: {time: -1, duration: -1, lyric: ''},
     interval: null
   };
+  apiBridge.lyricView = {
+  }
+  let previos=[]
+  function cie(a) {
+    if(apiBridge.ctxl.opened.includes(a)) {
+      previos.push(a)
+      apiBridge.ctxl.closeView(a);
+    }
+  }
+
+  apiBridge.lyricView.expand = () => {
+    previos=[];
+    if(document.querySelector('#progclose')) document.querySelector('#progclose').click();
+    document.getElementById('lyrics').style.width = '78%';
+    document.getElementById('lyrics').style.borderTopRightRadius = '0';
+    document.getElementById('lyrics').style.borderBottomRightRadius = '0';
+    // add style to .lyric
+    // width: 89%
+    document.querySelectorAll('.lyric').forEach(p => {
+      p.style.width = '97%';
+    });
+    cie("ctxl_home")
+    cie("ctxl_albums")
+    cie("ctxl_playlists")
+    cie("ctxl_nowplaying")
+  }
+  apiBridge.lyricView.collapse = () => {
+    document.getElementById('lyrics').style.width = '';
+    document.getElementById('lyrics').style.borderTopRightRadius = '';
+    document.getElementById('lyrics').style.borderBottomRightRadius = '';
+    document.querySelectorAll('.lyric').forEach(p => {
+      p.style.width = '';
+    });
+    previos.forEach(a => apiBridge.ctxl.nonDestructiveView(a));
+  }
+
   apiBridge.cve.on("music_play_start", doGet);
   if(apiBridge.playing.song) doGet(apiBridge.playing.song);
 
@@ -87,6 +135,7 @@
             p.classList.remove('active');
             p.classList.add('inactive');
           });
+          if(apiBridge._lyrics.last.time == -1 || apiBridge._lyrics.last.duration == -1) return;
           document.getElementById(`ly${apiBridge._lyrics.last.time}`).classList.add('active');
           document.getElementById(`ly${apiBridge._lyrics.last.time}`).classList.remove('inactive');
           document.getElementById(`ly${apiBridge._lyrics.last.time}`).scrollIntoView({behavior: 'smooth', block: 'center'});

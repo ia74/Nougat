@@ -1,7 +1,7 @@
 <div id="navbar">
   <h1>Nougat</h1>
   <button id="nowplaying">Now Playing</button>
-  <input type="range" id="volume" min="0" max="100" step="1" value="100">
+  <input id="navbar-volume" type="range" min="0" max="100" step="1" value="100">
   <div>
     <button class="minimizetopbar">
       Minimize top bar
@@ -22,9 +22,13 @@
     apiBridge.ctxl.nonDestructiveView('ctxl_progress');
     document.querySelector('#nowplaying').style.display = 'none';
   } 
-  document.querySelector('#volume').oninput = (e) => {
+  document.querySelector('#navbar-volume').oninput = (e) => {
     apiBridge.now.setVolume(e.target.value);
   }
+  apiBridge.cve.on("music_volume_update", (data) => {
+    if (!apiBridge.now.loadingBuffer && !apiBridge.now.firstInit) 
+    document.querySelector('#navbar-volume').value = data * 100;
+  })
 
   document.querySelector('.nuidttoggle').onclick = () => {
     const nuidet = document.getElementById('nuidet');

@@ -11,6 +11,24 @@
   <div id="toasts"></div>
   <script type="module" src="app.js"></script>
   <style>
+    .homepage-container {
+      border: 1px solid #333;
+      padding: 10px;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-evenly;
+      flex-direction: column;
+      gap: 2px;
+      border-radius: 1.5rem;
+      transition-duration: .5s;
+      transition-timing-function: cubic-bezier(0.05, 0.5, 0.1, 1.05);
+      z-index: 0;
+    }
+
+    .homepage-container:hover {
+      background-color: rgba(0, 0, 0, 0.125);
+      transform: scale(1.1);
+    }
     #toasts {
       position: fixed;
       top: 10%;

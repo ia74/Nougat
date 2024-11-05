@@ -108,9 +108,6 @@
       uirl.appendChild(btn);
     });
 
-    //TODO: move this into the navbar where #volume is
-    if (!apiBridge.now.loadingBuffer && !apiBridge.now.firstInit) document.querySelector('#volume').value = apiBridge.now.gainNode.gain.value * 100;
-
     const bs = document.querySelector('.bs');
     bs.innerText = apiBridge.now.status ? 'Loaded' : 'Loading';
     document.querySelector('.rtc').innerText = apiBridge.now.rtc;

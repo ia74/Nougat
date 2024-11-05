@@ -2,65 +2,28 @@
   import apiBridge from './apiBridge.js'
   if (!apiBridge.testConnectionToAppMain('music_handler')) console.error('[music_handler] Connection to APIBridge failed, the view will not work as expected')
 
-  let currentTimeOffset = 0;
   let clScrobbledYet = false;
   let audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  let buffer;
+  let audioElement = new Audio();
   let source;
 
-  const audioBuffers = {};
-  apiBridge.audioBuffers = audioBuffers;
-
-  async function preloadBuffers(audioContext, songUrls) {
-    for (const url of songUrls) {
-      if (audioBuffers[url]) {
-        console.log('Already preloaded', url);
-        continue;
-      }
-      const response = await fetch(url);
-      const arrayBuffer = await response.arrayBuffer();
-      const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-      audioBuffers[url] = audioBuffer;
-      console.log('Preloaded', url);
-    }
-  }
-
-  async function loadAudio(url) {
-    if (audioBuffers[url]) {
-      buffer = audioBuffers[url];
-    } else {
-      const response = await fetch(url);
-      apiBridge.cve.emit('loading_inc', 'Buffer loading: Got a response.<br/>');
-      const arrayBuffer = await response.arrayBuffer();
-      apiBridge.cve.emit('loading_inc', 'Buffer loading: Turned into arrayBuffer.<br/>');
-      buffer = await audioCtx.decodeAudioData(arrayBuffer);
-      apiBridge.cve.emit('loading_inc', 'Buffer loading: Decoded audio data.<br/>');
-      audioBuffers[url] = buffer;
-      apiBridge.cve.emit('loading_inc', 'Buffer loading: Loaded & cached.<br/>');
-    }
-    apiBridge.cve.emit('loading_inc', 'Buffer loading: Function end<br/>');
-  }
-
   const playSong = async (song, album, type="album") => {
+    console.log("PLAYING FROM TYPE", type);
     apiBridge.now.firstInit = false;
     apiBridge.cve.emit('loading', 'Starting ' + song.title + ' by ' + song.artist);
     clScrobbledYet = false;
-    if (!audioCtx) {
-      audioCtx = new AudioContext();
-    }
-    if (source) {
-      source.stop();
-      source = null;
-      buffer = null;
-      currentTimeOffset = 0;
-    }
-    if (apiBridge.now.cloop) {
-      clearInterval(apiBridge.now.cloop);
-    }
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    audioElement = new Audio();
+    if(source) source.disconnect();
+    if (apiBridge.now.cloop) clearInterval(apiBridge.now.cloop);
     apiBridge.cve.emit('loading_inc', 'Stopped all previous audio<br/>');
     apiBridge.now.loadingBuffer = true;
     apiBridge.cve.emit('loading_inc', 'Loading buffer<br/>');
-    await loadAudio(apiBridge.rawURL('/rest/stream?id=' + song.id));
+
+    // Set the audio element source to the song URL
+    audioElement.src = apiBridge.rawURL('/rest/stream?id=' + song.id);
+    audioElement.load();
+
     apiBridge.now.loadingBuffer = false;
     apiBridge.cve.emit('loading_inc', 'Loaded audio buffer<br/>');
     if (audioCtx) {
@@ -72,9 +35,9 @@
       }
       console.log('New audio buffer loaded - ' + song.title + ' by ' + song.artist);
     }
-    source = audioCtx.createBufferSource();
-    apiBridge.cve.emit('loading_inc', 'Connecting to audio stream<br/>');
-    source.buffer = buffer;
+
+    // Create a MediaElementAudioSourceNode from the audio element
+    source = audioCtx.createMediaElementSource(audioElement);
 
     let gainNode = audioCtx.createGain();
     apiBridge.now.gainNode = gainNode;
@@ -83,12 +46,13 @@
     gainNode.connect(audioCtx.destination);
 
     setVolume(apiBridge.localStorageHandler.get('volume'));
-    
-    source.start();
-    apiBridge.now.buffer = buffer;
+    setVolume(apiBridge.localStorageHandler.get('volume'));
+
+    audioElement.play();
+    apiBridge.now.buffer = audioElement;
     apiBridge.cve.emit('loading_inc', 'Connected!<br/>');
     apiBridge.cve.emit('loading_inc', 'Setting audio time<br/>');
-    apiBridge.now.rtc = audioCtx.currentTime + currentTimeOffset;
+    apiBridge.now.rtc = audioCtx.currentTime;
     apiBridge.music.scrobble(song.id, null, false);
     apiBridge.cve.emit('loading_inc', 'Setting last.fm scrobble<br/>');
     let startTime = new Date().getTime();
@@ -100,18 +64,17 @@
     }
     apiBridge.localStorageHandler.set('playing', JSON.stringify(apiBridge.playing));
     apiBridge.localStorageHandler.set('playingStartTime', startTime);
-    if (album.isAlbum) {
-      apiBridge.localStorageHandler.set('playingAlbum', album.id);
-      apiBridge.localStorageHandler.set('playingAlbumName', album.name);
-    }
-    apiBridge.localStorageHandler.set('playingDuration', source.buffer.duration);
+    apiBridge.localStorageHandler.set('playingLastType', type);
+    apiBridge.localStorageHandler.set('playingAlbum', album.id);
+    apiBridge.localStorageHandler.set('playingAlbumName', album.name);
+    apiBridge.localStorageHandler.set('playingDuration', audioElement.duration);
     apiBridge.cve.emit('loading_inc', 'Creating queue<br/>');
-    await mkQueue(type, album, song);
+    if(apiBridge.queue.songsLeft.length == 0 && apiBridge.queue.songsRight.length == 0)
+      await mkQueue(type, album, song);
     apiBridge.cve.emit('loading_inc', 'Set up all local variables, initializing playback loop<br/>');
     apiBridge.now.status = true;
     const tracking = setInterval(() => {
-      console.log(apiBridge.playing)
-      let realCurrentTime = Number(source.context.currentTime) + Number(currentTimeOffset);
+      let realCurrentTime = Number(audioElement.currentTime);
       apiBridge.now.rtc = realCurrentTime;
       apiBridge.localStorageHandler.set('playingTime', realCurrentTime);
       apiBridge.playing = {
@@ -122,15 +85,15 @@
       }
       document.title = song.artist + ' - ' + song.title + ' on Nougat';
       apiBridge.localStorageHandler.set('playing', JSON.stringify(apiBridge.playing));
-      if (realCurrentTime >= source.buffer.duration / 2 && apiBridge.localStorageHandler.get('scrobbled_' + song.id) != 'true') {
+      if (realCurrentTime >= audioElement.duration / 2 && apiBridge.localStorageHandler.get('scrobbled_' + song.id) != 'true') {
         apiBridge.music.scrobble(song.id, startTime, true);
         apiBridge.localStorageHandler.set('scrobbled_' + song.id, true);
         clScrobbledYet = true;
       }
-      if (source && realCurrentTime >= source.buffer.duration) {
+      if (audioElement && realCurrentTime >= audioElement.duration) {
         clearInterval(tracking);
         document.title = 'Nougat';
-        source.stop();
+        audioElement.pause();
         apiBridge.playing = null;
         apiBridge.localStorageHandler.set('playing', null);
         song.scrobbled = false;
@@ -140,20 +103,15 @@
         apiBridge.localStorageHandler.remove('scrobbled_' + song.id);
         apiBridge.queue.next();
       }
-      setVolume(apiBridge.localStorageHandler.get('volume'));
-      console.log('Playing time:', realCurrentTime);
     }, 1000);
     apiBridge.now.cloop = tracking;
     apiBridge.cve.emit('loading_inc', 'Successfully started playback loop<br/>');
     apiBridge.cve.emit('loaded');
     apiBridge.cve.emit('music_play_start', song);
-    let urls = apiBridge.queue.songsRight.concat([song]).concat(apiBridge.queue.songsLeft).map(s => apiBridge.rawURL('/rest/stream?id=' + s.id));
-    preloadBuffers(audioCtx, urls);
-    setVolume(apiBridge.localStorageHandler.get('volume'));
     return true;
   }
   apiBridge.music.playSong = playSong;
-  
+
   apiBridge.queue.songsLeft = [];
   apiBridge.queue.songsRight = [];
   apiBridge.queue.current = '';
@@ -164,14 +122,15 @@
       return queueFromAlbum(song, album);
     }
   }
+  apiBridge.mkQueue = mkQueue;
 
   const queueFromPlaylist = async (Dsong, playlist) => {
     const playlistIfo = await apiBridge.music.playlist(playlist.id);
-    const song = playlistIfo.song.find(s => s.id === Dsong.id);
-    const songIndex = playlistIfo.song.indexOf(song);
+    const song = playlistIfo.entry.find(s => s.id === Dsong.id);
+    const songIndex = playlistIfo.entry.indexOf(song);
     apiBridge.queue.infoPull = playlistIfo;
-    apiBridge.queue.songsLeft = playlistIfo.song.slice(0, songIndex);
-    apiBridge.queue.songsRight = playlistIfo.song.slice(songIndex + 1);
+    apiBridge.queue.songsLeft = playlistIfo.entry.slice(0, songIndex);
+    apiBridge.queue.songsRight = playlistIfo.entry.slice(songIndex + 1);
     apiBridge.queue.current = song;
     return true;
   }
@@ -188,7 +147,8 @@
   apiBridge.queue.next = async () => {
     if (apiBridge.queue.songsRight.length > 0) {
       const song = apiBridge.queue.songsRight.shift();
-      await apiBridge.music.playSong(song, { isAlbum: true, id: apiBridge.localStorageHandler.get('playingAlbum'), name: apiBridge.localStorageHandler.get('playingAlbumName') });
+      await apiBridge.music.playSong(song, { id: apiBridge.localStorageHandler.get('playingAlbum'), name: apiBridge.localStorageHandler.get('playingAlbumName') },
+        apiBridge.localStorageHandler.get('playingLastType'));
       setVolume(apiBridge.localStorageHandler.get('volume'));
     } else {
       apiBridge.toasts.send({ message: 'You\'ve reached the end of the queue! Stopping playback.' });
@@ -206,28 +166,13 @@
     }
   }
 
-  const setTime = async (time, buffer) => {
-    if (apiBridge.playing.source) {
-      apiBridge.playing.source.stop();
-      apiBridge.playing.source = apiBridge.playing.ctx.createBufferSource();
+  const setTime = async (time) => {
+    if (audioElement) {
+      audioElement.currentTime = time;
+      let realCurrentTime = Number(audioElement.currentTime);
+      apiBridge.now.rtc = realCurrentTime;
+      apiBridge.localStorageHandler.set('playingTime', time);
     }
-    apiBridge.playing.source.buffer = buffer;
-
-    if (!apiBridge.playing.gainNode) {
-      apiBridge.playing.gainNode = apiBridge.playing.ctx.createGain();
-      apiBridge.now.gainNode = apiBridge.playing.gainNode;
-    }
-
-    apiBridge.playing.source.connect(apiBridge.playing.gainNode);
-    apiBridge.playing.gainNode.connect(apiBridge.playing.ctx.destination);
-
-    setVolume(apiBridge.localStorageHandler.get('volume'));
-
-    apiBridge.playing.source.start(0, time);
-    currentTimeOffset = time;
-    let realCurrentTime = Number(apiBridge.playing.source.context.currentTime) + Number(currentTimeOffset);
-    apiBridge.now.rtc = realCurrentTime;
-    apiBridge.localStorageHandler.set('playingTime', time);
   };
 
   const map = (value, start1, stop1, start2, stop2) => start2 + (stop2 - start2) * ((value - start1) / (stop1 - start1));
@@ -235,34 +180,21 @@
   const setVolume = async (vol) => {
     if (apiBridge.playing && apiBridge.now.gainNode) {
       apiBridge.now.gainNode.gain.value = map(vol, 0, 100, 0, 1);
+      apiBridge.cve.emit('music_volume_update', apiBridge.now.gainNode.gain.value);
       apiBridge.localStorageHandler.set('volume', vol);
     }
   };
 
   const pause = async () => {
-    if (apiBridge.playing != null && apiBridge.playing.source) {
-      apiBridge.playing.source.stop();
-      apiBridge.playing.source = null;
-    }
-    if (apiBridge.playing && apiBridge.playing.ctx) {
-      await apiBridge.playing.ctx.close();
-      apiBridge.playing.ctx = null;
+    if (audioElement) {
+      audioElement.pause();
     }
     apiBridge.now.status = false;
   };
 
   const resume = async () => {
-    if (apiBridge.playing) {
-      if (!apiBridge.playing.ctx) {
-        apiBridge.playing.ctx = new AudioContext();
-      }
-      await apiBridge.music.playSong(apiBridge.playing.song, {
-        isAlbum: true,
-        id: apiBridge.localStorageHandler.get('playingAlbum'),
-        name: apiBridge.localStorageHandler.get('playingAlbumName')
-      });
-      setTime(apiBridge.localStorageHandler.get('playingTime'), apiBridge.now.buffer);
-      setVolume(apiBridge.localStorageHandler.get('volume'));
+    if (audioElement) {
+      audioElement.play();
     }
     apiBridge.now.status = true;
   };
@@ -284,13 +216,21 @@
     const duration = apiBridge.localStorageHandler.get('playingDuration');
     const startTime = apiBridge.localStorageHandler.get('playingStartTime');
     const playingTime = apiBridge.localStorageHandler.get('playingTime');
-    const songs = await apiBridge.music.album(albumId);
-    const song = songs.song.find(s => s.id === playing.id);
+    const type = apiBridge.localStorageHandler.get('playingLastType');
+    let song;
+    console.log("FOUND", type);
+    if(type == 'album') {
+      const songs = await apiBridge.music.album(albumId);
+      song = songs.song.find(s => s.id === playing.id);
+    } else {
+      const songs = await apiBridge.music.playlist(albumId);
+      song = songs.entry.find(s => s.id === playing.id);
+    }
     apiBridge.cve.emit('loading_inc', 'Got song data, playing!');
     apiBridge.cve.emit('loaded');
     console.log('Found song to resume, fetching stream');
-    await apiBridge.music.playSong(song, { isAlbum: true, id: albumId, name: albumName });
+    await apiBridge.music.playSong(song, { id: albumId, name: albumName }, type);
     console.log('Resuming song', playingTime, apiBridge.now.buffer);
-    apiBridge.now.setTime(playingTime, apiBridge.now.buffer);
+    apiBridge.now.setTime(playingTime);
   }
 </script>
